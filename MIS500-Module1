@@ -27,7 +27,7 @@ if (0.25*(len(df))== len(rows)):
     print(len(df), len(rows))
 
 # Display Sample Percentage
-print ('sample of 25%',rows)
+print ('sample of 25%' + "\n",rows)
 
 #END extract a 25% sample of data
 ############################################################
@@ -47,8 +47,8 @@ print( 'Sum of Ages', SumofAge)
 MeanAge = df['age'].mean()
 print( 'Average Ages', MeanAge)
 # Find the mean of all columns
-print ('Means of each column', df.mean(axis=0))
+print ('Means of each column' + "\n", df.mean(axis=0))
 # Describe the Data
-print df['iq'].describe()
+print (df['iq'].describe())
 
 #END
