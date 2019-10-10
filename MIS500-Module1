@@ -27,7 +27,7 @@ if (0.25*(len(df))== len(rows)):
     print(len(df), len(rows))
 
 # Display Sample Percentage
-print 'sample of 25%',rows
+print ('sample of 25%',rows)
 
 #END extract a 25% sample of data
 ############################################################
