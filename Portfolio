@@ -1,0 +1,135 @@
+*Load treansport file;
+
+
+     LIBNAME MEPSLIB '/folders/myfolders/SASdata/libraries';                                                              
+     FILENAME IN1 '/folders/myfolders/SASdata/transport file/h201.ssp';                                                
+                                                                                                 
+     PROC XCOPY IN=IN1 OUT=MEPSLIB IMPORT;                                                           
+     
+     RUN;
+
+ 
+*Set Formatting for readability;
+PROC Format;
+VALUE StndDiff  
+  -9 = '-9 NOT ASCERTAINED'
+  -8 = '-8 DK'
+  -7 = '-7 REFUSED'
+  -1 = '-1 INAPPLICABLE'
+  1 = '1 NO DIFFICULTY'
+  2 = '2 SOME DIFFICULTY'
+  3 = '3 A LOT OF DIFFICULTY'
+  4 = '4 UNABLE TO DO'
+  ;
+VALUE StepDiff  
+  -9 = '-9 NOT ASCERTAINED'
+  -8 = '-8 DK'
+  -7 = '-7 REFUSED'
+  -1 = '-1 INAPPLICABLE'
+  1 = '1 NO DIFFICULTY'
+  2 = '2 SOME DIFFICULTY'
+  3 = '3 A LOT OF DIFFICULTY'
+  4 = '4 COMPLETELY UNABLE TO DO IT'
+  5 = '5 COMPLETELY UNABLE TO WALK'
+  ;
+ VALUE BenDiff
+  -9 = '-9 NOT ASCERTAINED'
+  -8 = '-8 DK'
+  -7 = '-7 REFUSED'
+  -1 = '-1 INAPPLICABLE'
+  1 = '1 NO DIFFICULTY'
+  2 = '2 SOME DIFFICULTY'
+  3 = '3 A LOT OF DIFFICULTY'
+  4 = '4 UNABLE TO DO'
+  ;
+RUN;
+
+
+*Keep variables for analysis and format data for analysis;     
+DATA MEPS_Mobility;
+	SET MEPSLIB.h201 (KEEP= DUPERSID STPDIF31 STNDIF31 BENDIF31 IPDIS17 IPNGTD17);	
+*format actual variable for readibility;
+	FORMAT 
+	STNDIF31 StndDiff.
+	STPDIF31 StepDiff.
+	BENDIF31 BenDiff.;
+*Shorten variable labels for readability;
+	Label STNDIF31 = "Standing"
+	STPDIF31 = "Climbing Stairs"
+	BENDIF31 = "Bending Over"
+	AVGNOC = "Average LOS";
+	
+*Delete all dat where individulas were not hospitalized;   
+    if IPDIS17 < 1 then delete;
+    if IPNGTD17 < 1 then delete;
+*delete values where pt mobility level unknown;
+    if STNDIF31 = -1 or STNDIF31 = -7 or STNDIF31 = -8 OR STNDIF31 = -9 THEN Delete;
+    if STPDIF31 = -1 or STPDIF31 = -7 or STPDIF31 = -8 OR  STPDIF31 = -9 then Delete;
+    if BENDIF31 = -1 or BENDIF31 = -7 or BENDIF31 = -8 OR BENDIF31 = -9 then Delete;
+*consolidate responses 4 & 5 to "unable to"(4);
+    if STPDIF31 = 5 then STPDIF31 = 4;
+*Calculate Average nights of hospitalization;
+     AVGNOC = IPNGTD17 / IPDIS17;
+     if AVGNOC < 3 then delete;
+
+RUN;      
+
+	
+*Verify data integrity & formatting, print small data set;                                                                                                                                                                                  
+     PROC PRINT DATA=MEPS_Mobility (OBS=10) label;                                                    
+     TITLE 'First 10 Observations in MEPS H201 SAS Dataset';                                  
+     RUN;     
+
+*Sort Data by Average nights;
+PROC SORT DATA=MEPS_Mobility;
+			By AVGNOC;
+RUN;
+
+*Evaluate normality of all three data sets by class;
+PROC UNIVARIATE NORMALTEST ;
+	CLASS STNDIF31;
+	VAR AVGNOC;
+	histogram / NORMAL NROWS = 4;
+	inset kurtosis pnormal;
+	title "Ability to Stand 10 Minutes";
+RUN;
+
+PROC UNIVARIATE NORMALTEST noprint;
+	CLASS STPDIF31;
+	VAR AVGNOC;
+	histogram / NORMAL NROWS = 4;
+	inset kurtosis pnormal;
+	title "Ability To Climb 10 Stairs";
+RUN;
+
+PROC UNIVARIATE NORMALTEST noprint;
+	CLASS BENDIF31;
+	VAR AVGNOC;
+	histogram / NORMAL NROWS = 4;
+	inset kurtosis pnormal;
+	title "Ability to Bend Over";
+RUN;
+
+*Evaluate Non-Parametric Analysis for each data set include Kruskal-Wallis test, Wilcoxon, and MEdian
+*including a Duncan matrix for like effects;
+
+
+PROC NPAR1WAY wilcoxon median;
+	CLASS StnDIF31;
+	VAR AVGNOC;
+
+	title "Ability to Stand";
+RUN;
+
+PROC NPAR1way wilcoxon median;
+	CLASS StpDIF31;
+	VAR AVGNOC;
+	title "Ability to Climb Stairs";
+RUN;
+
+PROC NPAR1WAY wilcoxon median;
+	CLASS BENDIF31;
+	VAR AVGNOC;
+	title "Ability to Bend Over";
+RUN;
+
